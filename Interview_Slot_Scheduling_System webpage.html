@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Slot Scheduling &amp; Managing System</title>
+<style>
+:root{
+  --paper:#F6F4EE;
+  --paper-raised:#FBFAF6;
+  --line:#DDD8C9;
+  --line-soft:#EAE6D9;
+  --ink:#1C2B33;
+  --ink-soft:#5B6B72;
+  --ink-faint:#8B978E;
+  --brass:#A6763A;
+  --brass-dark:#8A5F2C;
+  --stamp-available:#2F6E4F;
+  --stamp-available-bg:#E7F1EA;
+  --stamp-booked:#A6432B;
+  --stamp-booked-bg:#F5E6DF;
+  --stamp-done:#3D5A80;
+  --stamp-done-bg:#E4EAF2;
+  --stamp-cancel:#8A8478;
+  --stamp-cancel-bg:#EEECE5;
+  --focus:#2F5B78;
+  --shadow: 0 1px 0 rgba(28,43,51,0.06);
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+}
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --paper:#14181A;
+    --paper-raised:#1B2023;
+    --line:#33393C;
+    --line-soft:#262B2D;
+    --ink:#EDEAE0;
+    --ink-soft:#A8AFAC;
+    --ink-faint:#6B726F;
+    --brass:#D2A05C;
+    --brass-dark:#E4B876;
+    --stamp-available:#6FBE93;
+    --stamp-available-bg:#1E2E24;
+    --stamp-booked:#E08A6E;
+    --stamp-booked-bg:#32211B;
+    --stamp-done:#8FB0D6;
+    --stamp-done-bg:#1E2733;
+    --stamp-cancel:#B4AFA3;
+    --stamp-cancel-bg:#25241F;
+    --focus:#7FB3D5;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#14181A;
+  --paper-raised:#1B2023;
+  --line:#33393C;
+  --line-soft:#262B2D;
+  --ink:#EDEAE0;
+  --ink-soft:#A8AFAC;
+  --ink-faint:#6B726F;
+  --brass:#D2A05C;
+  --brass-dark:#E4B876;
+  --stamp-available:#6FBE93;
+  --stamp-available-bg:#1E2E24;
+  --stamp-booked:#E08A6E;
+  --stamp-booked-bg:#32211B;
+  --stamp-done:#8FB0D6;
+  --stamp-done-bg:#1E2733;
+  --stamp-cancel:#B4AFA3;
+  --stamp-cancel-bg:#25241F;
+  --focus:#7FB3D5;
+  --shadow: 0 1px 0 rgba(0,0,0,0.3);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.5;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+h1,h2,h3,h4{font-family:var(--font-display); font-weight:600; margin:0; color:var(--ink);}
+
+/* ---------- Top chrome ---------- */
+.topbar{
+  border-bottom:1px solid var(--line);
+  background:var(--paper);
+  position:sticky; top:0; z-index:40;
+}
+.topbar-inner{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px; max-width:1180px; margin:0 auto;
+}
+.brand{display:flex; align-items:center; gap:10px; cursor:pointer; text-decoration:none;}
+.brand-mark{
+  width:34px;height:34px;border:1.5px solid var(--ink); border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:11px; font-weight:500; letter-spacing:0.5px;
+  color:var(--ink);
+}
+.brand-text{font-family:var(--font-display); font-weight:600; font-size:16.5px; letter-spacing:0.1px;}
+.brand-text small{display:block; font-family:var(--font-body); font-weight:500; font-size:10.5px; color:var(--ink-faint); letter-spacing:0.4px;}
+.topnav{display:flex; align-items:center; gap:22px; font-size:13.5px;}
+.topnav a{text-decoration:none; color:var(--ink-soft); padding:6px 2px; border-bottom:1px solid transparent; cursor:pointer;}
+.topnav a:hover{color:var(--ink); border-color:var(--line);}
+.topnav a.active{color:var(--ink); border-color:var(--brass);}
+.who{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-soft);}
+.who b{color:var(--ink); font-weight:600;}
+.btn{
+  font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer;
+  border-radius:3px; padding:8px 14px; border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  transition:opacity .12s ease;
+}
+.btn:hover{opacity:.85;}
+.btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn.ghost:hover{border-color:var(--ink); opacity:1;}
+.btn.small{padding:5px 10px; font-size:12px;}
+.btn.danger{background:var(--stamp-booked); border-color:var(--stamp-booked);}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+
+/* ---------- Layout with ledger tab rail ---------- */
+.shell{display:flex; min-height:calc(100vh - 64px); max-width:1180px; margin:0 auto;}
+.rail{
+  width:196px; flex-shrink:0; padding:26px 0 26px 28px; border-right:1px solid var(--line);
+}
+.rail-group{margin-bottom:26px;}
+.rail-label{font-size:10.5px; text-transform:uppercase; letter-spacing:1.1px; color:var(--ink-faint); margin-bottom:9px; font-weight:600;}
+.rail a{
+  display:block; text-decoration:none; color:var(--ink-soft); font-size:13.6px; padding:7px 12px 7px 0;
+  border-left:2px solid transparent; padding-left:12px; margin-left:-1px; cursor:pointer;
+}
+.rail a:hover{color:var(--ink);}
+.rail a.active{color:var(--ink); border-left-color:var(--brass); font-weight:600; background:var(--line-soft);}
+.main{flex:1; padding:28px 28px 60px 32px; min-width:0;}
+
+@media(max-width:820px){
+  .shell{flex-direction:column;}
+  .rail{width:100%; border-right:none; border-bottom:1px solid var(--line); padding:16px 20px; display:flex; gap:18px; overflow-x:auto;}
+  .rail-group{margin-bottom:0; white-space:nowrap;}
+  .main{padding:22px 20px 50px;}
+  .topnav{display:none;}
+}
+
+/* ---------- Cards / tables / ledger feel ---------- */
+.card{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:22px 24px;
+}
+.page-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;}
+.page-head h2{font-size:24px;}
+.page-sub{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
+.eyebrow{font-family:var(--font-mono); font-size:11px; color:var(--brass-dark); letter-spacing:0.3px; margin-bottom:6px;}
+
+table{width:100%; border-collapse:collapse; font-size:13.6px;}
+th{
+  text-align:left; font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:0.5px;
+  color:var(--ink-faint); padding:9px 12px; border-bottom:1.5px solid var(--ink); white-space:nowrap;
+}
+td{padding:11px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:4px;}
+.table-scroll table{border:none;}
+.table-scroll .table-scroll{border:none;}
+.mono{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft);}
+
+.stamp{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.3px; padding:3px 9px;
+  border-radius:20px; text-transform:uppercase;
+}
+.stamp.Available{color:var(--stamp-available); background:var(--stamp-available-bg);}
+.stamp.Booked, .stamp.Scheduled{color:var(--stamp-booked); background:var(--stamp-booked-bg);}
+.stamp.Completed{color:var(--stamp-done); background:var(--stamp-done-bg);}
+.stamp.Cancelled{color:var(--stamp-cancel); background:var(--stamp-cancel-bg);}
+
+.grid{display:grid; gap:16px;}
+.grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.grid.cols-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:700px){.grid.cols-3,.grid.cols-2{grid-template-columns:1fr;}}
+
+.stat{border:1px solid var(--line); border-radius:4px; padding:16px 18px; background:var(--paper-raised);}
+.stat .n{font-family:var(--font-display); font-size:30px; font-weight:600; line-height:1;}
+.stat .l{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+
+.bar-row{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:13px;}
+.bar-row .name{width:150px; flex-shrink:0; color:var(--ink-soft);}
+.bar-track{flex:1; height:8px; background:var(--line-soft); border-radius:2px; overflow:hidden;}
+.bar-fill{height:100%; background:var(--brass); border-radius:2px;}
+.bar-row .count{width:26px; text-align:right; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft);}
+
+form.form{display:flex; flex-direction:column; gap:14px; max-width:420px;}
+.field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px;}
+.field input, .field select, .field textarea{
+  width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:3px; background:var(--paper);
+  color:var(--ink); font-family:var(--font-body); font-size:13.8px;
+}
+.field input:focus, .field select:focus, .field textarea:focus{border-color:var(--focus);}
+.field-row{display:flex; gap:12px;}
+.field-row .field{flex:1;}
+.hint{font-size:12px; color:var(--ink-faint); margin-top:3px;}
+.error-box{background:var(--stamp-booked-bg); color:var(--stamp-booked); border:1px solid var(--stamp-booked); border-radius:3px; padding:9px 12px; font-size:13px; margin-bottom:10px;}
+.ok-box{background:var(--stamp-available-bg); color:var(--stamp-available); border:1px solid var(--stamp-available); border-radius:3px; padding:9px 12px; font-size:13px; margin-bottom:10px;}
+
+.empty{padding:34px 10px; text-align:center; color:var(--ink-faint); font-size:13.5px; border:1px dashed var(--line); border-radius:4px;}
+
+/* ---------- Landing / hero ---------- */
+.hero{padding:56px 0 40px; border-bottom:1px solid var(--line);}
+.hero-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:54px; align-items:center;}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr;}}
+.hero h1{font-size:42px; line-height:1.12; letter-spacing:-0.3px;}
+.hero p.lede{font-size:16px; color:var(--ink-soft); margin-top:16px; max-width:46ch; line-height:1.6;}
+.hero-cta{display:flex; gap:12px; margin-top:26px; flex-wrap:wrap;}
+.role-pick{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:30px; max-width:520px;}
+.role-card{
+  border:1px solid var(--line); border-radius:4px; padding:14px 12px; cursor:pointer; text-align:left;
+  background:var(--paper-raised);
+}
+.role-card:hover{border-color:var(--brass);}
+.role-card .rt{font-weight:600; font-size:13.5px;}
+.role-card .rs{font-size:11.5px; color:var(--ink-faint); margin-top:3px;}
+
+/* Ledger sheet: mini calendar with punched slots */
+.ledger-sheet{
+  border:1px solid var(--line); border-radius:6px; background:var(--paper-raised); padding:20px 20px 16px;
+  box-shadow:var(--shadow);
+}
+.ledger-sheet .ls-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+.ledger-sheet .ls-head b{font-family:var(--font-display); font-size:15px;}
+.ledger-sheet .ls-head span{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);}
+.week-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+.day-col{border:1px solid var(--line-soft); border-radius:4px; padding:8px 6px; background:var(--paper);}
+.day-col .dname{font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-faint); text-align:center; margin-bottom:3px;}
+.day-col .dnum{font-family:var(--font-display); font-size:16px; text-align:center; margin-bottom:8px; font-weight:600;}
+.slot-chip{
+  font-family:var(--font-mono); font-size:9.8px; text-align:center; padding:3px 2px; margin-bottom:4px; border-radius:3px;
+}
+.slot-chip.a{background:var(--stamp-available-bg); color:var(--stamp-available);}
+.slot-chip.b{background:var(--stamp-booked-bg); color:var(--stamp-booked);}
+.ledger-legend{display:flex; gap:16px; margin-top:14px; font-size:11.5px; color:var(--ink-soft);}
+.ledger-legend span{display:inline-flex; align-items:center; gap:5px;}
+.dot{width:8px;height:8px;border-radius:50%; display:inline-block;}
+.dot.a{background:var(--stamp-available);}
+.dot.b{background:var(--stamp-booked);}
+
+.section{padding:46px 0; border-bottom:1px solid var(--line);}
+.section:last-child{border-bottom:none;}
+.section h3{font-size:22px; margin-bottom:20px;}
+.num-list{list-style:none; margin:0; padding:0; display:grid; gap:16px;}
+.num-list li{display:flex; gap:14px; align-items:flex-start;}
+.num-badge{
+  font-family:var(--font-mono); font-size:11px; color:var(--brass-dark); border:1px solid var(--line); border-radius:50%;
+  width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;
+}
+.num-list .t{font-weight:600; font-size:14.5px;}
+.num-list .d{color:var(--ink-soft); font-size:13.5px; margin-top:2px; line-height:1.55;}
+
+footer.site-foot{padding:26px 0 50px; font-size:12px; color:var(--ink-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+
+/* ---------- Schema page ---------- */
+.erd{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0;}
+@media(max-width:800px){.erd{grid-template-columns:1fr 1fr;}}
+@media(max-width:520px){.erd{grid-template-columns:1fr;}}
+.entity{border:1px solid var(--line); border-radius:4px; overflow:hidden; background:var(--paper-raised);}
+.entity h4{background:var(--ink); color:var(--paper); font-size:12.5px; padding:8px 12px; letter-spacing:0.3px; font-family:var(--font-body); font-weight:700;}
+.entity ul{list-style:none; margin:0; padding:8px 12px 10px;}
+.entity li{font-family:var(--font-mono); font-size:11.8px; padding:3px 0; color:var(--ink-soft);}
+.entity li b{color:var(--ink); font-weight:600;}
+.entity li.pk{color:var(--brass-dark);}
+.entity li.fk{color:var(--stamp-done);}
+
+/* ---------- Query console ---------- */
+.console-toggle{
+  position:fixed; right:20px; bottom:20px; z-index:60;
+  background:var(--ink); color:var(--paper); border:none; border-radius:22px; padding:10px 16px;
+  font-family:var(--font-mono); font-size:12px; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.25);
+  display:flex; align-items:center; gap:7px;
+}
+.console-dot{width:6px;height:6px;border-radius:50%; background:var(--stamp-available); display:inline-block;}
+.console{
+  position:fixed; right:0; bottom:0; z-index:59; width:min(440px,100%); max-height:46vh;
+  background:var(--ink); color:#D7E4D9; border-top-left-radius:8px; box-shadow:-2px -2px 16px rgba(0,0,0,0.3);
+  display:flex; flex-direction:column; transform:translateY(100%); transition:transform .22s ease;
+}
+.console.open{transform:translateY(0);}
+.console-head{display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid #2C3B41; font-family:var(--font-mono); font-size:11.5px; color:#9FB0A8;}
+.console-head button{background:none;border:none;color:#9FB0A8;cursor:pointer;font-size:15px;}
+.console-body{overflow-y:auto; padding:10px 14px; font-family:var(--font-mono); font-size:11.6px; line-height:1.7;}
+.console-line{margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid #232F34;}
+.console-line:last-child{border:none;}
+.console-line .qsql{color:#EAF3EC;}
+.console-line .qtag{color:var(--brass); margin-right:6px;}
+.console-empty{color:#6B7E75; padding:10px 0;}
+
+.modal-bg{position:fixed; inset:0; background:rgba(20,24,26,0.55); z-index:70; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal{background:var(--paper-raised); border:1px solid var(--line); border-radius:6px; padding:26px 26px 22px; max-width:440px; width:100%;}
+.modal h3{font-size:18px; margin-bottom:10px;}
+.modal p{font-size:13.6px; color:var(--ink-soft); line-height:1.55;}
+.modal-actions{display:flex; gap:10px; margin-top:18px; justify-content:flex-end;}
+
+.tag-pill{display:inline-block; font-size:11px; font-family:var(--font-mono); color:var(--ink-faint); border:1px solid var(--line); border-radius:3px; padding:2px 7px; margin-right:5px;}
+.demo-note{font-size:11.8px; color:var(--ink-faint); border-top:1px dashed var(--line); margin-top:16px; padding-top:12px;}
+.inline-form{display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button class="console-toggle" id="consoleToggle" onclick="toggleConsole()"><span class="console-dot"></span>Query log</button>
+<div class="console" id="console">
+  <div class="console-head">
+    <span>DATABASE ACTIVITY &mdash; live query log</span>
+    <button onclick="toggleConsole()" aria-label="Close">&times;</button>
+  </div>
+  <div class="console-body" id="consoleBody"></div>
+</div>
+
+<script>
+/* =========================================================================
+   Interview Slot Scheduling & Managing System
+   Client-side reference implementation.
+   The schema, constraints and operations below mirror the MySQL design
+   from the project report (ADMIN, INTERVIEWER, CANDIDATE, SLOT, BOOKING).
+   Data lives in the browser's localStorage, standing in for the MySQL
+   database so the whole flow can be demoed without a live server.
+   ========================================================================= */
+
+const DB_KEY = 'ivs_db_v1';
+const SESSION_KEY = 'ivs_session_v1';
+
+function todayPlus(n){
+  const d = new Date();
+  d.setDate(d.getDate()+n);
+  return d;
+}
+function fmtDate(d){
+  return d.toISOString().slice(0,10);
+}
+function fmtDateNice(dstr){
+  const d = new Date(dstr+'T00:00:00');
+  return d.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'});
+}
+function nextWeekday(fromOffset){
+  // returns array of next N weekday date strings starting today
+  let out = [];
+  let i = 0, added = 0;
+  while(added < fromOffset){
+    const d = todayPlus(i);
+    if(d.getDay() !== 0 && d.getDay() !== 6){ out.push(fmtDate(d)); added++; }
+    i++;
+  }
+  return out;
+}
+
+function seedDB(){
+  const weekdays = nextWeekday(5); // next 5 weekdays incl today if weekday
+  const interviewers = [
+    {interviewer_id:'I001', name:'Rakesh Verma', dept:'Software Engineering', email:'rakesh.verma@ivs.edu', password:'pass123', availability:'Mon–Fri, 10:00–17:00'},
+    {interviewer_id:'I002', name:'Ananya Iyer', dept:'Data Science', email:'ananya.iyer@ivs.edu', password:'pass123', availability:'Mon–Thu, 09:30–15:30'},
+    {interviewer_id:'I003', name:'Farhan Sheikh', dept:'Human Resources', email:'farhan.sheikh@ivs.edu', password:'pass123', availability:'Tue–Fri, 11:00–18:00'}
+  ];
+  const admins = [
+    {admin_id:'A001', name:'Priyanka Desai', email:'admin@ivs.edu', password:'admin123'}
+  ];
+  const candidates = [
+    {candidate_id:'C001', name:'Meera Nair', email:'meera.nair@gmail.com', password:'pass123', resume_link:'drive.google.com/meera-nair-resume'},
+    {candidate_id:'C002', name:'Aditya Rao', email:'aditya.rao@gmail.com', password:'pass123', resume_link:'drive.google.com/aditya-rao-resume'},
+    {candidate_id:'C003', name:'Priya Menon', email:'priya.menon@gmail.com', password:'pass123', resume_link:'drive.google.com/priya-menon-resume'},
+    {candidate_id:'C004', name:'Vikram Desai', email:'vikram.desai@gmail.com', password:'pass123', resume_link:'drive.google.com/vikram-desai-resume'}
+  ];
+  const times = ['10:00','11:30','14:00'];
+  let slots = [];
+  let sid = 1;
+  weekdays.forEach(date=>{
+    interviewers.forEach(iv=>{
+      times.forEach(t=>{
+        // not every interviewer has every slot, keep it realistic
+        if(Math.random() < 0.78){
+          slots.push({
+            slot_id:'S'+String(sid).padStart(3,'0'),
+            date, time:t, status:'Available', interviewer_id: iv.interviewer_id
+          });
+          sid++;
+        }
+      });
+    });
+  });
+  let bookings = [];
+  let bid = 1;
+  // seed a handful of bookings so dashboards aren't empty
+  const bookableSlots = slots.filter(s=>s.status==='Available');
+  const seedPlan = [
+    {c:'C001', idx:0, status:'Scheduled'},
+    {c:'C002', idx:2, status:'Scheduled'},
+    {c:'C003', idx:4, status:'Completed'},
+    {c:'C004', idx:6, status:'Scheduled'},
+    {c:'C001', idx:8, status:'Cancelled'}
+  ];
+  seedPlan.forEach(p=>{
+    const slot = bookableSlots[p.idx];
+    if(!slot) return;
+    bookings.push({
+      booking_id:'B'+String(bid).padStart(3,'0'),
+      slot_id:slot.slot_id, candidate_id:p.c, interviewer_id:slot.interviewer_id, status:p.status
+    });
+    bid++;
+    const realSlot = slots.find(s=>s.slot_id===slot.slot_id);
+    if(p.status === 'Cancelled'){ realSlot.status = 'Available'; }
+    else { realSlot.status = 'Booked'; }
+  });
+
+  return {admins, interviewers, candidates, slots, bookings, seededAt: Date.now()};
+}
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ /* storage unavailable */ }
+  const fresh = seedDB();
+  saveDB(fresh);
+  return fresh;
+}
+function saveDB(db){
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(db)); }catch(e){}
+}
+function resetDB(){
+  const fresh = seedDB();
+  saveDB(fresh);
+  DB = fresh;
+  QLOG = [];
+  route('#/');
+}
+
+let DB = loadDB();
+
+/* ---------------- Query log (teaching aid) ---------------- */
+let QLOG = [];
+function logQuery(tag, sql){
+  QLOG.unshift({tag, sql, t: Date.now()});
+  if(QLOG.length > 14) QLOG.pop();
+  renderConsole();
+}
+function renderConsole(){
+  const body = document.getElementById('consoleBody');
+  if(!body) return;
+  if(QLOG.length===0){ body.innerHTML = '<div class="console-empty">No queries yet — browse slots, log in, or make a booking to see the generated SQL here.</div>'; return; }
+  body.innerHTML = QLOG.map(q=>`<div class="console-line"><span class="qtag">${q.tag}</span><span class="qsql">${escapeHtml(q.sql)}</span></div>`).join('');
+}
+function toggleConsole(){
+  document.getElementById('console').classList.toggle('open');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------- Session ---------------- */
+function getSession(){
+  try{ const raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function setSession(s){
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }catch(e){}
+}
+function clearSession(){
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+}
+
+/* ---------------- Router ---------------- */
+function route(hash){
+  if(hash) location.hash = hash;
+  render();
+}
+window.addEventListener('hashchange', render);
+window.addEventListener('DOMContentLoaded', ()=>{ render(); renderConsole(); });
+
+function currentHash(){
+  return location.hash || '#/';
+}
+function parseHash(){
+  const h = currentHash().replace(/^#\//,'');
+  const parts = h.split('/').filter(Boolean);
+  return parts;
+}
+
+function guard(role){
+  const s = getSession();
+  if(!s || s.role !== role){ route('#/login/'+role); return null; }
+  return s;
+}
+
+/* ---------------- Render root ---------------- */
+function render(){
+  const parts = parseHash();
+  const app = document.getElementById('app');
+  const session = getSession();
+
+  if(parts.length===0){ app.innerHTML = viewHome(session); attachHomeHandlers(); return; }
+
+  const top = parts[0];
+
+  if(top==='login'){ app.innerHTML = chromeShellless(viewLogin(parts[1]||'candidate')); attachLoginHandlers(parts[1]||'candidate'); return; }
+  if(top==='register'){ app.innerHTML = chromeShellless(viewRegister(parts[1]||'candidate')); attachRegisterHandlers(parts[1]||'candidate'); return; }
+  if(top==='schema'){ app.innerHTML = chromeShellless(viewSchema()); attachSchemaHandlers(); return; }
+  if(top==='about'){ app.innerHTML = chromeShellless(viewAbout()); return; }
+
+  if(top==='candidate'){
+    const s = guard('candidate'); if(!s) return;
+    const sub = parts[1]||'browse';
+    app.innerHTML = chromeShell('candidate', s, renderCandidateSub(sub, s));
+    attachCandidateHandlers(sub, s);
+    return;
+  }
+  if(top==='interviewer'){
+    const s = guard('interviewer'); if(!s) return;
+    const sub = parts[1]||'assigned';
+    app.innerHTML = chromeShell('interviewer', s, renderInterviewerSub(sub, s));
+    attachInterviewerHandlers(sub, s);
+    return;
+  }
+  if(top==='admin'){
+    const s = guard('admin'); if(!s) return;
+    const sub = parts[1]||'slots';
+    app.innerHTML = chromeShell('admin', s, renderAdminSub(sub, s));
+    attachAdminHandlers(sub, s);
+    return;
+  }
+
+  app.innerHTML = viewHome(session);
+  attachHomeHandlers();
+}
+
+/* ---------------- Shared chrome ---------------- */
+function topbarHtml(session){
+  let who = '';
+  if(session){
+    const label = session.role.charAt(0).toUpperCase()+session.role.slice(1);
+    who = `<div class="who"><span>${label} session</span> &middot; <b>${escapeHtml(session.name)}</b>
+      <button class="btn ghost small" onclick="doLogout()">Log out</button></div>`;
+  } else {
+    who = `<div class="who">
+      <a class="btn ghost small" onclick="route('#/login/admin')">Staff log in</a>
+    </div>`;
+  }
+  return `
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" onclick="route('#/')">
+        <span class="brand-mark">ISS</span>
+        <span class="brand-text">Interview Slot Register<small>Scheduling &amp; Managing System</small></span>
+      </a>
+      <nav class="topnav">
+        <a onclick="route('#/')">Home</a>
+        <a onclick="route('#/schema')">Schema</a>
+        <a onclick="route('#/about')">About</a>
+      </nav>
+      ${who}
+    </div>
+  </div>`;
+}
+function chromeShellless(inner){
+  const session = getSession();
+  return topbarHtml(session) + `<div class="wrap" style="padding-top:36px; padding-bottom:60px;">${inner}</div>`;
+}
+function railHtml(active, role){
+  const items = {
+    candidate: [
+      ['browse','Browse open slots'],
+      ['mine','My interview'],
+      ['profile','My profile']
+    ],
+    interviewer: [
+      ['assigned','My interviews'],
+      ['availability','Availability']
+    ],
+    admin: [
+      ['slots','Manage slots'],
+      ['interviewers','Interviewers'],
+      ['bookings','All bookings'],
+      ['reports','Reports']
+    ]
+  };
+  const list = items[role].map(([key,label])=>
+    `<a class="${active===key?'active':''}" onclick="route('#/${role}/${key}')">${label}</a>`
+  ).join('');
+  return `<div class="rail">
+    <div class="rail-group">
+      <div class="rail-label">${role}</div>
+      ${list}
+    </div>
+    <div class="rail-group">
+      <div class="rail-label">Reference</div>
+      <a onclick="route('#/schema')">DB schema</a>
+    </div>
+  </div>`;
+}
+function chromeShell(role, session, innerHtml){
+  const parts = parseHash();
+  const active = parts[1] || (role==='candidate'?'browse':role==='interviewer'?'assigned':'slots');
+  return topbarHtml(session) + `
+  <div class="shell">
+    ${railHtml(active, role)}
+    <div class="main">${innerHtml}</div>
+  </div>`;
+}
+function doLogout(){
+  clearSession();
+  route('#/');
+}
+
+/* ---------------- HOME ---------------- */
+function viewHome(session){
+  const weekdays = nextWeekday(5);
+  const slotsByDay = weekdays.map(d=>({
+    date:d,
+    slots: DB.slots.filter(s=>s.date===d).slice(0,4)
+  }));
+  const totalSlots = DB.slots.length;
+  const bookedCount = DB.slots.filter(s=>s.status==='Booked').length;
+
+  return topbarHtml(session) + `
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">DBMS MINI PROJECT &mdash; B.TECH II YEAR</div>
+          <h1>One register for every<br/>interview slot.</h1>
+          <p class="lede">Admins open the slots, candidates claim one, interviewers see exactly who's coming and when &mdash; all reading and writing the same relational tables, so nothing is ever double&#8209;booked.</p>
+          <div class="hero-cta">
+            <button class="btn" onclick="route('#/register/candidate')">Book an interview slot</button>
+            <button class="btn ghost" onclick="route('#/schema')">See the database design</button>
+          </div>
+          <div class="role-pick">
+            <button class="role-card" onclick="route('#/login/candidate')">
+              <div class="rt">Candidate</div>
+              <div class="rs">Browse &amp; book a slot</div>
+            </button>
+            <button class="role-card" onclick="route('#/login/interviewer')">
+              <div class="rt">Interviewer</div>
+              <div class="rs">View your schedule</div>
+            </button>
+            <button class="role-card" onclick="route('#/login/admin')">
+              <div class="rt">Admin</div>
+              <div class="rs">Manage the register</div>
+            </button>
+          </div>
+        </div>
+        <div class="ledger-sheet">
+          <div class="ls-head">
+            <b>This week's slots</b>
+            <span>${bookedCount} of ${totalSlots} booked</span>
+          </div>
+          <div class="week-grid">
+            ${slotsByDay.map(day=>`
+              <div class="day-col">
+                <div class="dname">${new Date(day.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short'})}</div>
+                <div class="dnum">${new Date(day.date+'T00:00:00').getDate()}</div>
+                ${day.slots.length ? day.slots.map(s=>`<div class="slot-chip ${s.status==='Booked'?'b':'a'}">${s.time}</div>`).join('') : '<div class="slot-chip a" style="opacity:.4">&mdash;</div>'}
+              </div>
+            `).join('')}
+          </div>
+          <div class="ledger-legend">
+            <span><i class="dot a"></i>Available</span>
+            <span><i class="dot b"></i>Booked</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Why a database, not a spreadsheet</h3>
+      <ol class="num-list">
+        <li><span class="num-badge">1</span><div><div class="t">Double-booking becomes structurally impossible</div><div class="d">A UNIQUE constraint on <code class="mono">booking.slot_id</code> means the database itself rejects a second booking on a taken slot &mdash; not a person remembering to check.</div></div></li>
+        <li><span class="num-badge">2</span><div><div class="t">Everyone reads the same live table</div><div class="d">Admins, interviewers and candidates all query the same <code class="mono">slot</code> and <code class="mono">booking</code> tables, so status is never out of sync between an email thread and a spreadsheet.</div></div></li>
+        <li><span class="num-badge">3</span><div><div class="t">Relationships are enforced, not assumed</div><div class="d">Foreign keys tie every booking back to a real candidate, interviewer and slot &mdash; orphaned or made-up records can't exist.</div></div></li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h3>Three roles, one register</h3>
+      <div class="grid cols-3">
+        <div class="card">
+          <div class="eyebrow">Candidate</div>
+          <h4 style="font-size:16px; margin-bottom:8px;">Book a slot</h4>
+          <p style="font-size:13.3px; color:var(--ink-soft); line-height:1.55;">Register, browse open slots by date or interviewer, and reserve one in a click. Cancel any time to free it back up for someone else.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Interviewer</div>
+          <h4 style="font-size:16px; margin-bottom:8px;">See who's coming</h4>
+          <p style="font-size:13.3px; color:var(--ink-soft); line-height:1.55;">A running list of assigned interviews with candidate details, plus the ability to mark each one completed once it's done.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Admin</div>
+          <h4 style="font-size:16px; margin-bottom:8px;">Run the register</h4>
+          <p style="font-size:13.3px; color:var(--ink-soft); line-height:1.55;">Open new slots, add interviewers, watch every booking system-wide, and pull instant load reports per interviewer.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  <footer class="site-foot wrap">
+    <span>Interview Slot Scheduling &amp; Managing System &mdash; DBMS mini project</span>
+    <span><a style="cursor:pointer; text-decoration:underline;" onclick="resetDemoConfirm()">Reset demo data</a></span>
+  </footer>
+  `;
+}
+function attachHomeHandlers(){}
+function resetDemoConfirm(){
+  showModal('Reset demo data?','This restores the original seeded interviewers, slots and bookings, and clears anything you added in this session.',
+    [{label:'Cancel', cls:'ghost'},{label:'Reset', cls:'danger', action:()=>{ resetDB(); }}]);
+}
+
+/* ---------------- Modal helper ---------------- */
+function showModal(title, body, actions){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.id = 'modalBg';
+  bg.innerHTML = `<div class="modal">
+    <h3>${title}</h3>
+    <p>${body}</p>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>`;
+  document.body.appendChild(bg);
+  const actWrap = bg.querySelector('#modalActions');
+  actions.forEach(a=>{
+    const b = document.createElement('button');
+    b.className = 'btn ' + (a.cls||'');
+    b.textContent = a.label;
+    b.onclick = ()=>{ closeModal(); if(a.action) a.action(); };
+    actWrap.appendChild(b);
+  });
+  bg.addEventListener('click', (e)=>{ if(e.target===bg) closeModal(); });
+}
+function closeModal(){
+  const bg = document.getElementById('modalBg');
+  if(bg) bg.remove();
+}
+
+/* ---------------- LOGIN / REGISTER ---------------- */
+function roleTable(role){
+  return role==='admin' ? DB.admins : role==='interviewer' ? DB.interviewers : DB.candidates;
+}
+function roleIdField(role){
+  return role==='admin' ? 'admin_id' : role==='interviewer' ? 'interviewer_id' : 'candidate_id';
+}
+function demoCreds(role){
+  if(role==='admin') return 'admin@ivs.edu / admin123';
+  if(role==='interviewer') return 'rakesh.verma@ivs.edu / pass123';
+  return 'meera.nair@gmail.com / pass123';
+}
+function viewLogin(role){
+  const label = role.charAt(0).toUpperCase()+role.slice(1);
+  return `
+  <div class="page-head"><div><div class="eyebrow">Log in</div><h2>${label} sign-in</h2>
+  <div class="page-sub">Runs <code class="mono">SELECT * FROM ${role} WHERE email=? AND password=?</code> against the ${role} table.</div></div></div>
+  <div class="card" style="max-width:420px;">
+    <div id="loginError"></div>
+    <form class="form" id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" required></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" required></div>
+      <button class="btn" type="submit">Log in as ${label.toLowerCase()}</button>
+    </form>
+    <div class="demo-note">Demo login &mdash; <span class="mono">${demoCreds(role)}</span></div>
+  </div>
+  <p style="font-size:13px; color:var(--ink-soft); margin-top:16px;">
+    ${role==='candidate' ? `New candidate? <a style="text-decoration:underline; cursor:pointer;" onclick="route('#/register/candidate')">Register here</a>.` : `Choose a different role:`}
+    ${role!=='candidate' ? ` <a style="cursor:pointer; text-decoration:underline;" onclick="route('#/login/candidate')">Candidate</a> &middot; <a style="cursor:pointer; text-decoration:underline;" onclick="route('#/login/interviewer')">Interviewer</a> &middot; <a style="cursor:pointer; text-decoration:underline;" onclick="route('#/login/admin')">Admin</a>` : ''}
+  </p>`;
+}
+function attachLoginHandlers(role){
+  const form = document.getElementById('loginForm');
+  if(!form) return;
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    logQuery('SELECT', `SELECT * FROM ${role} WHERE email='${email}' AND password='••••••';`);
+    const table = roleTable(role);
+    const idField = roleIdField(role);
+    const row = table.find(r=>r.email.toLowerCase()===email.toLowerCase() && r.password===pass);
+    if(!row){
+      document.getElementById('loginError').innerHTML = `<div class="error-box">No matching record &mdash; check the email and password and try again.</div>`;
+      return;
+    }
+    setSession({role, id:row[idField], name:row.name, email:row.email});
+    route(role==='admin' ? '#/admin/slots' : role==='interviewer' ? '#/interviewer/assigned' : '#/candidate/browse');
+  });
+}
+function viewRegister(role){
+  if(role !== 'candidate'){
+    return `<div class="page-head"><h2>Accounts are added by admin</h2></div>
+    <div class="card"><p style="font-size:13.6px; color:var(--ink-soft);">${role.charAt(0).toUpperCase()+role.slice(1)} accounts are created from the Admin panel (mirroring the Admin Module in the design), not self-registration. Log in with credentials given to you by admin.</p>
+    <button class="btn ghost" style="margin-top:10px;" onclick="route('#/login/${role}')">Go to ${role} log in</button></div>`;
+  }
+  return `
+  <div class="page-head"><div><div class="eyebrow">Register</div><h2>New candidate</h2>
+  <div class="page-sub">Runs <code class="mono">INSERT INTO candidate (candidate_id, name, email, password, resume_link) VALUES (...)</code></div></div></div>
+  <div class="card" style="max-width:460px;">
+    <div id="regError"></div>
+    <form class="form" id="regForm">
+      <div class="field"><label>Full name</label><input type="text" id="regName" required></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" required></div>
+      <div class="field"><label>Password</label><input type="password" id="regPassword" required minlength="4"></div>
+      <div class="field"><label>Resume link <span style="font-weight:400; color:var(--ink-faint);">(optional)</span></label><input type="text" id="regResume" placeholder="drive.google.com/your-resume"></div>
+      <button class="btn" type="submit">Create account</button>
+    </form>
+  </div>
+  <p style="font-size:13px; color:var(--ink-soft); margin-top:16px;">Already registered? <a style="cursor:pointer; text-decoration:underline;" onclick="route('#/login/candidate')">Log in</a>.</p>
+  `;
+}
+function attachRegisterHandlers(role){
+  const form = document.getElementById('regForm');
+  if(!form) return;
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const resume = document.getElementById('regResume').value.trim() || '—';
+    if(DB.candidates.some(c=>c.email.toLowerCase()===email.toLowerCase())){
+      document.getElementById('regError').innerHTML = `<div class="error-box">That email is already registered. Try logging in instead.</div>`;
+      return;
+    }
+    const nextNum = DB.candidates.length + 1;
+    const candidate_id = 'C'+String(nextNum).padStart(3,'0');
+    const row = {candidate_id, name, email, password, resume_link: resume};
+    DB.candidates.push(row);
+    saveDB(DB);
+    logQuery('INSERT', `INSERT INTO candidate (candidate_id, name, email, resume_link) VALUES ('${candidate_id}', '${name}', '${email}', '${resume}');`);
+    setSession({role:'candidate', id:candidate_id, name, email});
+    route('#/candidate/browse');
+  });
+}
+
+/* ---------------- CANDIDATE ---------------- */
+function interviewerName(id){
+  const iv = DB.interviewers.find(i=>i.interviewer_id===id);
+  return iv ? iv.name : id;
+}
+function interviewerDept(id){
+  const iv = DB.interviewers.find(i=>i.interviewer_id===id);
+  return iv ? iv.dept : '';
+}
+function candidateName(id){
+  const c = DB.candidates.find(c=>c.candidate_id===id);
+  return c ? c.name : id;
+}
+function renderCandidateSub(sub, session){
+  if(sub==='mine') return candidateMine(session);
+  if(sub==='profile') return candidateProfile(session);
+  return candidateBrowse(session);
+}
+function candidateBrowse(session){
+  const depts = [...new Set(DB.interviewers.map(i=>i.dept))];
+  const open = DB.slots.filter(s=>s.status==='Available').sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  return `
+  <div class="page-head">
+    <div><div class="eyebrow">Candidate</div><h2>Browse open slots</h2>
+    <div class="page-sub">Reads <code class="mono">SELECT * FROM slot WHERE status='Available'</code>, joined against interviewer.</div></div>
+  </div>
+  <div class="card" style="margin-bottom:18px;">
+    <div class="inline-form">
+      <div class="field" style="min-width:170px;"><label>Department</label>
+        <select id="filterDept"><option value="">All departments</option>${depts.map(d=>`<option value="${d}">${d}</option>`).join('')}</select>
+      </div>
+      <div class="field" style="min-width:170px;"><label>Date</label>
+        <select id="filterDate"><option value="">Any date</option>${[...new Set(DB.slots.map(s=>s.date))].sort().map(d=>`<option value="${d}">${fmtDateNice(d)}</option>`).join('')}</select>
+      </div>
+      <button class="btn ghost small" onclick="applyCandidateFilter()">Filter</button>
+    </div>
+  </div>
+  <div id="slotTableWrap">${slotTableHtml(open)}</div>
+  `;
+}
+function slotTableHtml(list){
+  if(list.length===0) return `<div class="empty">No open slots match that filter right now &mdash; try a different department or date.</div>`;
+  return `<div class="table-scroll"><table>
+    <thead><tr><th>Date</th><th>Time</th><th>Interviewer</th><th>Department</th><th></th></tr></thead>
+    <tbody>
+      ${list.map(s=>`<tr>
+        <td>${fmtDateNice(s.date)}</td>
+        <td class="mono">${s.time}</td>
+        <td>${interviewerName(s.interviewer_id)}</td>
+        <td>${interviewerDept(s.interviewer_id)}</td>
+        <td><button class="btn small" onclick="confirmBook('${s.slot_id}')">Book slot</button></td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+function applyCandidateFilter(){
+  const dept = document.getElementById('filterDept').value;
+  const date = document.getElementById('filterDate').value;
+  let open = DB.slots.filter(s=>s.status==='Available');
+  if(dept) open = open.filter(s=>interviewerDept(s.interviewer_id)===dept);
+  if(date) open = open.filter(s=>s.date===date);
+  open.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  document.getElementById('slotTableWrap').innerHTML = slotTableHtml(open);
+}
+function confirmBook(slot_id){
+  const slot = DB.slots.find(s=>s.slot_id===slot_id);
+  if(!slot) return;
+  showModal('Confirm this slot?',
+    `${fmtDateNice(slot.date)} at <b>${slot.time}</b> with <b>${interviewerName(slot.interviewer_id)}</b> (${interviewerDept(slot.interviewer_id)}). You can cancel later from "My interview" if plans change.`,
+    [{label:'Not now', cls:'ghost'},{label:'Book it', action:()=>bookSlot(slot_id)}]);
+}
+function bookSlot(slot_id){
+  const session = getSession();
+  const slot = DB.slots.find(s=>s.slot_id===slot_id);
+  if(!slot || slot.status !== 'Available'){
+    logQuery('ERROR', `INSERT INTO booking (slot_id, candidate_id, ...) VALUES ('${slot_id}', '${session.id}', ...); -- rejected: duplicate key on UNIQUE(slot_id)`);
+    showModal('That slot just got taken', 'Someone booked it a moment before you did. Pick another open slot from the list.', [{label:'OK'}]);
+    route('#/candidate/browse');
+    return;
+  }
+  const nextNum = DB.bookings.length + 1;
+  const booking_id = 'B'+String(nextNum).padStart(3,'0');
+  DB.bookings.push({booking_id, slot_id, candidate_id: session.id, interviewer_id: slot.interviewer_id, status:'Scheduled'});
+  slot.status = 'Booked';
+  saveDB(DB);
+  logQuery('INSERT', `INSERT INTO booking (booking_id, slot_id, candidate_id, interviewer_id) VALUES ('${booking_id}', '${slot_id}', '${session.id}', '${slot.interviewer_id}');`);
+  logQuery('UPDATE', `UPDATE slot SET status='Booked' WHERE slot_id='${slot_id}';`);
+  route('#/candidate/mine');
+}
+function candidateMine(session){
+  const mine = DB.bookings.filter(b=>b.candidate_id===session.id).map(b=>({...b, slot: DB.slots.find(s=>s.slot_id===b.slot_id)}));
+  mine.sort((a,b)=> (a.slot.date+a.slot.time).localeCompare(b.slot.date+b.slot.time));
+  return `
+  <div class="page-head"><div><div class="eyebrow">Candidate</div><h2>My interview${mine.length!==1?'s':''}</h2>
+  <div class="page-sub">Reads <code class="mono">SELECT * FROM booking WHERE candidate_id='${session.id}'</code> joined to slot &amp; interviewer.</div></div></div>
+  ${mine.length===0 ? `<div class="empty">You haven't booked a slot yet. <a style="cursor:pointer; text-decoration:underline;" onclick="route('#/candidate/browse')">Browse open slots</a>.</div>` :
+  `<div class="table-scroll"><table>
+    <thead><tr><th>Date</th><th>Time</th><th>Interviewer</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${mine.map(b=>`<tr>
+        <td>${fmtDateNice(b.slot.date)}</td>
+        <td class="mono">${b.slot.time}</td>
+        <td>${interviewerName(b.interviewer_id)}</td>
+        <td><span class="stamp ${b.status}">${b.status}</span></td>
+        <td>${b.status==='Scheduled' ? `<button class="btn ghost small" onclick="confirmCancel('${b.booking_id}')">Cancel</button>` : ''}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`}
+  `;
+}
+function confirmCancel(booking_id){
+  showModal('Cancel this booking?', 'The slot will reopen for other candidates immediately.',
+    [{label:'Keep it', cls:'ghost'},{label:'Cancel booking', cls:'danger', action:()=>cancelBooking(booking_id)}]);
+}
+function cancelBooking(booking_id){
+  const b = DB.bookings.find(b=>b.booking_id===booking_id);
+  if(!b) return;
+  b.status = 'Cancelled';
+  const slot = DB.slots.find(s=>s.slot_id===b.slot_id);
+  if(slot) slot.status = 'Available';
+  saveDB(DB);
+  logQuery('UPDATE', `UPDATE booking SET status='Cancelled' WHERE booking_id='${booking_id}';`);
+  logQuery('UPDATE', `UPDATE slot SET status='Available' WHERE slot_id='${b.slot_id}';`);
+  route('#/candidate/mine');
+}
+function candidateProfile(session){
+  const c = DB.candidates.find(c=>c.candidate_id===session.id);
+  return `
+  <div class="page-head"><div><div class="eyebrow">Candidate</div><h2>My profile</h2></div></div>
+  <div class="card" style="max-width:420px;">
+    <table>
+      <tr><td style="color:var(--ink-faint);">Candidate ID</td><td class="mono">${c.candidate_id}</td></tr>
+      <tr><td style="color:var(--ink-faint);">Name</td><td>${c.name}</td></tr>
+      <tr><td style="color:var(--ink-faint);">Email</td><td>${c.email}</td></tr>
+      <tr><td style="color:var(--ink-faint);">Resume link</td><td>${c.resume_link}</td></tr>
+    </table>
+  </div>`;
+}
+function attachCandidateHandlers(sub, session){}
+
+/* ---------------- INTERVIEWER ---------------- */
+function renderInterviewerSub(sub, session){
+  if(sub==='availability') return interviewerAvailability(session);
+  return interviewerAssigned(session);
+}
+function interviewerAssigned(session){
+  const rows = DB.bookings.filter(b=>b.interviewer_id===session.id && b.status!=='Cancelled')
+    .map(b=>({...b, slot: DB.slots.find(s=>s.slot_id===b.slot_id)}))
+    .sort((a,b)=> (a.slot.date+a.slot.time).localeCompare(b.slot.date+b.slot.time));
+  return `
+  <div class="page-head"><div><div class="eyebrow">Interviewer</div><h2>My interviews</h2>
+  <div class="page-sub">Reads <code class="mono">SELECT * FROM booking WHERE interviewer_id='${session.id}'</code> joined to candidate &amp; slot.</div></div></div>
+  ${rows.length===0 ? `<div class="empty">No interviews assigned to you yet.</div>` :
+  `<div class="table-scroll"><table>
+    <thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Resume</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${rows.map(b=>{
+        const cand = DB.candidates.find(c=>c.candidate_id===b.candidate_id);
+        return `<tr>
+        <td>${fmtDateNice(b.slot.date)}</td>
+        <td class="mono">${b.slot.time}</td>
+        <td>${cand ? cand.name : b.candidate_id}</td>
+        <td class="mono">${cand ? cand.resume_link : '—'}</td>
+        <td><span class="stamp ${b.status}">${b.status}</span></td>
+        <td>${b.status==='Scheduled' ? `<button class="btn small" onclick="markComplete('${b.booking_id}')">Mark completed</button>` : ''}</td>
+      </tr>`}).join('')}
+    </tbody>
+  </table></div>`}
+  `;
+}
+function markComplete(booking_id){
+  const b = DB.bookings.find(b=>b.booking_id===booking_id);
+  if(!b) return;
+  b.status = 'Completed';
+  saveDB(DB);
+  logQuery('UPDATE', `UPDATE booking SET status='Completed' WHERE booking_id='${booking_id}';`);
+  route('#/interviewer/assigned');
+}
+function interviewerAvailability(session){
+  const iv = DB.interviewers.find(i=>i.interviewer_id===session.id);
+  return `
+  <div class="page-head"><div><div class="eyebrow">Interviewer</div><h2>Availability</h2>
+  <div class="page-sub">Stored on <code class="mono">interviewer.availability</code>; admin uses this when opening new slots for you.</div></div></div>
+  <div class="card" style="max-width:460px;">
+    <div id="availMsg"></div>
+    <form class="form" id="availForm">
+      <div class="field"><label>Department</label><input type="text" value="${iv.dept}" disabled></div>
+      <div class="field"><label>Availability window</label><input type="text" id="availInput" value="${iv.availability}"></div>
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </div>`;
+}
+function attachInterviewerHandlers(sub, session){
+  const form = document.getElementById('availForm');
+  if(!form) return;
+  form.addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const iv = DB.interviewers.find(i=>i.interviewer_id===session.id);
+    iv.availability = document.getElementById('availInput').value;
+    saveDB(DB);
+    logQuery('UPDATE', `UPDATE interviewer SET availability='${iv.availability}' WHERE interviewer_id='${session.id}';`);
+    document.getElementById('availMsg').innerHTML = `<div class="ok-box">Availability updated.</div>`;
+  });
+}
+
+/* ---------------- ADMIN ---------------- */
+function renderAdminSub(sub, session){
+  if(sub==='interviewers') return adminInterviewers(session);
+  if(sub==='bookings') return adminBookings(session);
+  if(sub==='reports') return adminReports(session);
+  return adminSlots(session);
+}
+function adminSlots(session){
+  const rows = [...DB.slots].sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  return `
+  <div class="page-head"><div><div class="eyebrow">Admin</div><h2>Manage slots</h2>
+  <div class="page-sub">Writes to <code class="mono">INSERT INTO slot (...)</code>; status defaults to Available.</div></div></div>
+  <div class="card" style="margin-bottom:20px;">
+    <div id="slotFormMsg"></div>
+    <form class="form" id="newSlotForm">
+      <div class="field-row">
+        <div class="field"><label>Date</label><input type="date" id="newSlotDate" required></div>
+        <div class="field"><label>Time</label><input type="time" id="newSlotTime" required value="10:00"></div>
+      </div>
+      <div class="field"><label>Interviewer</label>
+        <select id="newSlotInterviewer">${DB.interviewers.map(i=>`<option value="${i.interviewer_id}">${i.name} — ${i.dept}</option>`).join('')}</select>
+      </div>
+      <button class="btn" type="submit">Open new slot</button>
+    </form>
+  </div>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Slot ID</th><th>Date</th><th>Time</th><th>Interviewer</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${rows.map(s=>`<tr>
+        <td class="mono">${s.slot_id}</td>
+        <td>${fmtDateNice(s.date)}</td>
+        <td class="mono">${s.time}</td>
+        <td>${interviewerName(s.interviewer_id)}</td>
+        <td><span class="stamp ${s.status}">${s.status}</span></td>
+        <td>${s.status==='Available' ? `<button class="btn ghost small" onclick="cancelSlot('${s.slot_id}')">Cancel</button>` : ''}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>
+  `;
+}
+function cancelSlot(slot_id){
+  showModal('Cancel this slot?','It will no longer show up for candidates to book.',
+    [{label:'Keep it', cls:'ghost'},{label:'Cancel slot', cls:'danger', action:()=>{
+      const s = DB.slots.find(s=>s.slot_id===slot_id);
+      s.status = 'Cancelled';
+      saveDB(DB);
+      logQuery('UPDATE', `UPDATE slot SET status='Cancelled' WHERE slot_id='${slot_id}';`);
+      route('#/admin/slots');
+    }}]);
+}
+function adminInterviewers(session){
+  return `
+  <div class="page-head"><div><div class="eyebrow">Admin</div><h2>Interviewers</h2>
+  <div class="page-sub">Writes to <code class="mono">INSERT INTO interviewer (...)</code>.</div></div></div>
+  <div class="card" style="margin-bottom:20px;">
+    <div id="ivFormMsg"></div>
+    <form class="form" id="newIvForm">
+      <div class="field"><label>Name</label><input type="text" id="ivName" required></div>
+      <div class="field-row">
+        <div class="field"><label>Department</label><input type="text" id="ivDept" required></div>
+        <div class="field"><label>Availability</label><input type="text" id="ivAvail" placeholder="Mon–Fri, 10:00–17:00"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Email</label><input type="email" id="ivEmail" required></div>
+        <div class="field"><label>Temporary password</label><input type="text" id="ivPass" required value="pass123"></div>
+      </div>
+      <button class="btn" type="submit">Add interviewer</button>
+    </form>
+  </div>
+  <div class="table-scroll"><table>
+    <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Email</th><th>Availability</th></tr></thead>
+    <tbody>
+      ${DB.interviewers.map(i=>`<tr>
+        <td class="mono">${i.interviewer_id}</td><td>${i.name}</td><td>${i.dept}</td><td class="mono">${i.email}</td><td>${i.availability}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+function adminBookings(session){
+  const rows = [...DB.bookings].map(b=>({...b, slot: DB.slots.find(s=>s.slot_id===b.slot_id)}))
+    .sort((a,b)=> (a.slot.date+a.slot.time).localeCompare(b.slot.date+b.slot.time));
+  return `
+  <div class="page-head"><div><div class="eyebrow">Admin</div><h2>All bookings</h2>
+  <div class="page-sub">Reads <code class="mono">SELECT * FROM booking</code> joined across every table &mdash; the full picture no single role sees alone.</div></div></div>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Booking</th><th>Date</th><th>Time</th><th>Candidate</th><th>Interviewer</th><th>Status</th></tr></thead>
+    <tbody>
+      ${rows.map(b=>`<tr>
+        <td class="mono">${b.booking_id}</td>
+        <td>${fmtDateNice(b.slot.date)}</td>
+        <td class="mono">${b.slot.time}</td>
+        <td>${candidateName(b.candidate_id)}</td>
+        <td>${interviewerName(b.interviewer_id)}</td>
+        <td><span class="stamp ${b.status}">${b.status}</span></td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+function adminReports(session){
+  const total = DB.slots.length;
+  const booked = DB.slots.filter(s=>s.status==='Booked').length;
+  const available = DB.slots.filter(s=>s.status==='Available').length;
+  const completed = DB.bookings.filter(b=>b.status==='Completed').length;
+  const cancelled = DB.bookings.filter(b=>b.status==='Cancelled').length;
+  const maxLoad = Math.max(1, ...DB.interviewers.map(i=>DB.bookings.filter(b=>b.interviewer_id===i.interviewer_id && b.status!=='Cancelled').length));
+  return `
+  <div class="page-head"><div><div class="eyebrow">Admin</div><h2>Reports</h2>
+  <div class="page-sub">Aggregated with <code class="mono">GROUP BY</code> / <code class="mono">COUNT(*)</code> over slot &amp; booking.</div></div></div>
+  <div class="grid cols-3" style="margin-bottom:22px;">
+    <div class="stat"><div class="n">${total}</div><div class="l">Total slots opened</div></div>
+    <div class="stat"><div class="n">${booked}</div><div class="l">Currently booked</div></div>
+    <div class="stat"><div class="n">${available}</div><div class="l">Still available</div></div>
+  </div>
+  <div class="grid cols-3" style="margin-bottom:26px;">
+    <div class="stat"><div class="n">${completed}</div><div class="l">Interviews completed</div></div>
+    <div class="stat"><div class="n">${cancelled}</div><div class="l">Bookings cancelled</div></div>
+    <div class="stat"><div class="n">${DB.candidates.length}</div><div class="l">Registered candidates</div></div>
+  </div>
+  <div class="card">
+    <h4 style="font-size:15px; margin-bottom:16px;">Interview load per interviewer</h4>
+    ${DB.interviewers.map(i=>{
+      const count = DB.bookings.filter(b=>b.interviewer_id===i.interviewer_id && b.status!=='Cancelled').length;
+      const pct = Math.round((count/maxLoad)*100);
+      return `<div class="bar-row"><div class="name">${i.name}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="count">${count}</div></div>`;
+    }).join('')}
+  </div>`;
+}
+function attachAdminHandlers(sub, session){
+  const slotForm = document.getElementById('newSlotForm');
+  if(slotForm){
+    slotForm.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const date = document.getElementById('newSlotDate').value;
+      const time = document.getElementById('newSlotTime').value;
+      const interviewer_id = document.getElementById('newSlotInterviewer').value;
+      if(!date){ document.getElementById('slotFormMsg').innerHTML = `<div class="error-box">Pick a date first.</div>`; return; }
+      const clash = DB.slots.find(s=>s.date===date && s.time===time && s.interviewer_id===interviewer_id && s.status!=='Cancelled');
+      if(clash){
+        logQuery('ERROR', `INSERT INTO slot (...) VALUES ('${date}','${time}','${interviewer_id}'); -- rejected: duplicate key on UNIQUE(date, time, interviewer_id)`);
+        document.getElementById('slotFormMsg').innerHTML = `<div class="error-box">This interviewer already has a slot at that date &amp; time.</div>`;
+        return;
+      }
+      const nextNum = DB.slots.length + 1;
+      const slot_id = 'S'+String(nextNum).padStart(3,'0');
+      DB.slots.push({slot_id, date, time, status:'Available', interviewer_id});
+      saveDB(DB);
+      logQuery('INSERT', `INSERT INTO slot (slot_id, date, time, status, interviewer_id) VALUES ('${slot_id}', '${date}', '${time}', 'Available', '${interviewer_id}');`);
+      route('#/admin/slots');
+    });
+  }
+  const ivForm = document.getElementById('newIvForm');
+  if(ivForm){
+    ivForm.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const name = document.getElementById('ivName').value.trim();
+      const dept = document.getElementById('ivDept').value.trim();
+      const avail = document.getElementById('ivAvail').value.trim() || 'Not set';
+      const email = document.getElementById('ivEmail').value.trim();
+      const pass = document.getElementById('ivPass').value;
+      if(DB.interviewers.some(i=>i.email.toLowerCase()===email.toLowerCase())){
+        document.getElementById('ivFormMsg').innerHTML = `<div class="error-box">An interviewer with that email already exists.</div>`;
+        return;
+      }
+      const nextNum = DB.interviewers.length + 1;
+      const interviewer_id = 'I'+String(nextNum).padStart(3,'0');
+      DB.interviewers.push({interviewer_id, name, dept, email, password:pass, availability:avail});
+      saveDB(DB);
+      logQuery('INSERT', `INSERT INTO interviewer (interviewer_id, name, dept, email, availability) VALUES ('${interviewer_id}', '${name}', '${dept}', '${email}', '${avail}');`);
+      route('#/admin/interviewers');
+    });
+  }
+}
+
+/* ---------------- SCHEMA / ABOUT ---------------- */
+function viewSchema(){
+  return `
+  <div class="page-head"><div><div class="eyebrow">Reference</div><h2>Database design</h2>
+  <div class="page-sub">Five tables, matching the ER design in the project report.</div></div></div>
+  <div class="erd">
+    <div class="entity"><h4>ADMIN</h4><ul>
+      <li class="pk">admin_id <b>PK</b></li><li>name</li><li>email</li><li>password</li>
+    </ul></div>
+    <div class="entity"><h4>INTERVIEWER</h4><ul>
+      <li class="pk">interviewer_id <b>PK</b></li><li>name</li><li>dept</li><li>email</li><li>password</li><li>availability</li>
+    </ul></div>
+    <div class="entity"><h4>CANDIDATE</h4><ul>
+      <li class="pk">candidate_id <b>PK</b></li><li>name</li><li>email</li><li>password</li><li>resume_link</li>
+    </ul></div>
+    <div class="entity"><h4>SLOT</h4><ul>
+      <li class="pk">slot_id <b>PK</b></li><li>date</li><li>time</li><li>status</li>
+      <li class="fk">interviewer_id <b>FK</b></li>
+    </ul></div>
+    <div class="entity"><h4>BOOKING</h4><ul>
+      <li class="pk">booking_id <b>PK</b></li>
+      <li class="fk">slot_id <b>FK, UNIQUE</b></li>
+      <li class="fk">candidate_id <b>FK</b></li>
+      <li class="fk">interviewer_id <b>FK</b></li>
+      <li>status</li>
+    </ul></div>
+  </div>
+
+  <div class="card" style="margin-top:8px;">
+    <h4 style="font-size:15.5px; margin-bottom:8px;">Try the UNIQUE constraint</h4>
+    <p style="font-size:13.4px; color:var(--ink-soft); line-height:1.55;">Booking already-booked slot <code class="mono" id="clashSlotLabel">—</code> a second time simulates what the database does when two candidates race for the same slot.</p>
+    <button class="btn ghost small" onclick="tryDoubleBook()">Attempt a double booking</button>
+    <div id="clashResult" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="section" style="border-bottom:none; padding-bottom:0;">
+    <h3>How a booking actually happens</h3>
+    <ol class="num-list">
+      <li><span class="num-badge">1</span><div><div class="t">Admin opens a slot</div><div class="d"><code class="mono">INSERT INTO slot</code> with <code class="mono">status='Available'</code>, tied to one interviewer via foreign key.</div></div></li>
+      <li><span class="num-badge">2</span><div><div class="t">Candidate books it</div><div class="d">The app checks the slot is still <code class="mono">Available</code>, then <code class="mono">INSERT INTO booking</code> and flips the slot to <code class="mono">Booked</code> &mdash; both writes happen together.</div></div></li>
+      <li><span class="num-badge">3</span><div><div class="t">A UNIQUE constraint backstops it</div><div class="d">Even if two requests slipped through at the same instant, <code class="mono">UNIQUE(slot_id)</code> on the booking table means the database itself refuses the second insert.</div></div></li>
+      <li><span class="num-badge">4</span><div><div class="t">Interviewer &amp; admin see it instantly</div><div class="d">Same tables, no sync step &mdash; the interviewer's schedule and the admin's report both read the row the moment it's written.</div></div></li>
+    </ol>
+  </div>
+  `;
+}
+function attachSchemaHandlers(){
+  const label = document.getElementById('clashSlotLabel');
+  const bookedSlot = DB.slots.find(s=>s.status==='Booked');
+  if(label) label.textContent = bookedSlot ? bookedSlot.slot_id : '(none booked yet)';
+}
+function tryDoubleBook(){
+  const bookedSlot = DB.slots.find(s=>s.status==='Booked');
+  const box = document.getElementById('clashResult');
+  if(!bookedSlot){
+    box.innerHTML = `<div class="error-box">No slot is currently booked to demo this with &mdash; book one first from the candidate view.</div>`;
+    return;
+  }
+  const fakeCandidate = DB.candidates[Math.floor(Math.random()*DB.candidates.length)];
+  logQuery('ERROR', `INSERT INTO booking (slot_id, candidate_id, interviewer_id) VALUES ('${bookedSlot.slot_id}', '${fakeCandidate.candidate_id}', '${bookedSlot.interviewer_id}'); -- 1062: Duplicate entry '${bookedSlot.slot_id}' for key 'UNIQUE(slot_id)'`);
+  box.innerHTML = `<div class="error-box"><b>Rejected by the database:</b> Duplicate entry for key <span class="mono">UNIQUE(slot_id)</span> on <span class="mono">${bookedSlot.slot_id}</span>. That's the constraint doing its job.</div>`;
+  toggleConsoleOpen();
+}
+function toggleConsoleOpen(){
+  const c = document.getElementById('console');
+  if(!c.classList.contains('open')) c.classList.add('open');
+}
+function viewAbout(){
+  return `
+  <div class="page-head"><div><div class="eyebrow">About this build</div><h2>Tech stack</h2></div></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h4 style="font-size:15px; margin-bottom:10px;">As specified in the project report</h4>
+      <table>
+        <tr><td style="color:var(--ink-faint);">Front end</td><td>HTML5, CSS3, JavaScript</td></tr>
+        <tr><td style="color:var(--ink-faint);">Back end</td><td>PHP / Python (Django or Flask)</td></tr>
+        <tr><td style="color:var(--ink-faint);">Database</td><td>MySQL 8.0</td></tr>
+        <tr><td style="color:var(--ink-faint);">Tools</td><td>VS Code, MySQL Workbench, XAMPP</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4 style="font-size:15px; margin-bottom:10px;">In this demo build</h4>
+      <p style="font-size:13.4px; color:var(--ink-soft); line-height:1.6;">This walkthrough runs the same five-table schema and constraints entirely in the browser, so it can be demoed live without a server. Every insert, update and select is logged in the query console (bottom-right) in the SQL it would run against MySQL &mdash; swap that storage layer for a real Django/Flask + MySQL backend and the front end and logic carry over unchanged.</p>
+    </div>
+  </div>
+  <p style="font-size:13px; color:var(--ink-soft); margin-top:22px;"><a style="cursor:pointer; text-decoration:underline;" onclick="route('#/')">Back to home</a></p>
+  `;
+}
+</script>
+</body>
+</html>
